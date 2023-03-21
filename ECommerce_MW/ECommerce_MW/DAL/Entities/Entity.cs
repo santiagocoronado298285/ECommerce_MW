@@ -7,7 +7,9 @@ namespace ECommerce_MW.DAL.Entities
         [Key]
         [Required]
         public Guid Id { get; set; }
+        [Display(Name ="Fecha creacion")]
         public DateTime? CreatedDate { get; set; }
+        [Display(Name = "Fecha de modificacion")]
         public DateTime? ModifiedDate { get; set;}
     }
 }
