@@ -1,12 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
-using ECommerce_MW.DAL;
+﻿using ECommerce_MW.DAL;
 using ECommerce_MW.DAL.Entities;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace ECommerce_MW.Controllers
 {
@@ -19,12 +14,10 @@ namespace ECommerce_MW.Controllers
             _context = context;
         }
 
-        // GET: Countries
+        // GET: Countries  
         public async Task<IActionResult> Index()
         {
-              return _context.Countries != null ? 
-                          View(await _context.Countries.ToListAsync()) :
-                          Problem("Entity set 'DataBaseContext.Countries'  is null.");
+            return View(await _context.Countries.ToListAsync());
         }
 
         // GET: Countries/Details/5
@@ -45,25 +38,38 @@ namespace ECommerce_MW.Controllers
             return View(country);
         }
 
-        // GET: Countries/Create
         public IActionResult Create()
         {
             return View();
         }
 
-        // POST: Countries/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Country country)
         {
-            if (ModelState. IsValid)
+            if (ModelState.IsValid)
             {
-                country.Id = Guid.NewGuid();
                 _context.Add(country);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                try
+                {
+                    await _context.SaveChangesAsync();
+                    return RedirectToAction(nameof(Index));
+                }
+                catch (DbUpdateException dbUpdateException)
+                {
+                    if (dbUpdateException.InnerException.Message.Contains("duplicate"))
+                    {
+                        ModelState.AddModelError(string.Empty, "Ya existe un país con el mismo nombre.");
+                    }
+                    else
+                    {
+                        ModelState.AddModelError(string.Empty, dbUpdateException.InnerException.Message);
+                    }
+                }
+                catch (Exception exception)
+                {
+                    ModelState.AddModelError(string.Empty, exception.Message);
+                }
             }
             return View(country);
         }
@@ -102,19 +108,23 @@ namespace ECommerce_MW.Controllers
                 {
                     _context.Update(country);
                     await _context.SaveChangesAsync();
+                    return RedirectToAction(nameof(Index));
                 }
-                catch (DbUpdateConcurrencyException)
+                catch (DbUpdateException dbUpdateException)
                 {
-                    if (!CountryExists(country.Id))
+                    if (dbUpdateException.InnerException.Message.Contains("duplicate"))
                     {
-                        return NotFound();
+                        ModelState.AddModelError(string.Empty, "Ya existe un país con el mismo nombre.");
                     }
                     else
                     {
-                        throw;
+                        ModelState.AddModelError(string.Empty, dbUpdateException.InnerException.Message);
                     }
                 }
-                return RedirectToAction(nameof(Index));
+                catch (Exception exception)
+                {
+                    ModelState.AddModelError(string.Empty, exception.Message);
+                }
             }
             return View(country);
         }
@@ -127,8 +137,7 @@ namespace ECommerce_MW.Controllers
                 return NotFound();
             }
 
-            var country = await _context.Countries
-                .FirstOrDefaultAsync(m => m.Id == id);
+            var country = await _context.Countries.FirstOrDefaultAsync(m => m.Id == id);
             if (country == null)
             {
                 return NotFound();
@@ -144,21 +153,21 @@ namespace ECommerce_MW.Controllers
         {
             if (_context.Countries == null)
             {
-                return Problem("Entity set 'DataBaseContext.Countries'  is null.");
+                return Problem("Entity set 'DatabaseContext.Countries'  is null.");
             }
             var country = await _context.Countries.FindAsync(id);
             if (country != null)
             {
                 _context.Countries.Remove(country);
             }
-            
+
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 
         private bool CountryExists(Guid id)
         {
-          return (_context.Countries?.Any(e => e.Id == id)).GetValueOrDefault();
+            return _context.Countries.Any(e => e.Id == id);
         }
     }
 }
