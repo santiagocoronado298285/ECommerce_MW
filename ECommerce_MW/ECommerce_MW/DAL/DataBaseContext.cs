@@ -17,7 +17,7 @@ namespace ECommerce_MW.DAL
         {
             base.OnModelCreating(modelBuilder);
             modelBuilder.Entity<Country>().HasIndex(p => p.Name).IsUnique();
-            modelBuilder.Entity<Category>().HasIndex(c => c.Name).IsUnique();
+            modelBuilder.Entity<Category>().HasIndex(p => p.Name).IsUnique();
         }
     }
 }
