@@ -137,7 +137,7 @@ namespace ECommerce_MW.Controllers
                 return NotFound();
             }
 
-            var country = await _context.Countries.FirstOrDefaultAsync(m => m.Id == id);
+            Country country = await _context.Countries.FirstOrDefaultAsync(m => m.Id == id);
             if (country == null)
             {
                 return NotFound();
@@ -165,9 +165,6 @@ namespace ECommerce_MW.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        private bool CountryExists(Guid id)
-        {
-            return _context.Countries.Any(e => e.Id == id);
-        }
+      
     }
 }
