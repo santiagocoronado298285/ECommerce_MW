@@ -1,5 +1,6 @@
 ﻿using ECommerce_MW.DAL;
 using ECommerce_MW.DAL.Entities;
+using ECommerce_MW.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,7 +18,8 @@ namespace ECommerce_MW.Controllers
         // GET: Countries  
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Countries.ToListAsync());
+            var x =await _context.Countries.Include(c => c.States).ToListAsync();
+            return View(x);
         }
 
         // GET: Countries/Details/5
@@ -165,9 +167,66 @@ namespace ECommerce_MW.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        private bool CountryExists(Guid id)
+        [HttpGet]
+        public async Task<IActionResult> AddState(Guid? id)
         {
-            return _context.Countries.Any(e => e.Id == id);
+            if (id== null)
+            {
+                return NotFound();
+            }
+
+            Country country = await _context.Countries.FindAsync(id);
+            if (country == null)
+            {
+                return NotFound();
+            }
+
+            StateViewModel stateViewModel = new()
+            {
+                CountryId = country.Id,
+            };
+
+            return View(stateViewModel);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddState(StateViewModel stateViewModel)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    State state = new State()
+                    {
+                        Cities = new List<City>(),
+                        Country = await _context.Countries.FindAsync(stateViewModel.CountryId),
+                        Name = stateViewModel.Name,
+                        CreatedDate = stateViewModel.CreatedDate,
+                        ModifiedDate = DateTime.Now,
+                    };
+
+                    _context.Add(state);
+                    await _context.SaveChangesAsync();
+                    return RedirectToAction(nameof(Details), new { Id = stateViewModel.CountryId });
+                }
+                catch (DbUpdateException dbUpdateException)
+                {
+                    if (dbUpdateException.InnerException.Message.Contains("duplicate"))
+                    {
+                        ModelState.AddModelError(string.Empty, "Ya existe un Dpto/Estado con el mismo nombre en este país.");
+                    }
+                    else
+                    {
+                        ModelState.AddModelError(string.Empty, dbUpdateException.InnerException.Message);
+                    }
+                }
+                catch (Exception exception)
+                {
+                    ModelState.AddModelError(string.Empty, exception.Message);
+                }
+            }
+            return View(stateViewModel);
         }
     }
 }

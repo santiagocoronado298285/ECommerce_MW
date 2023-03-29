@@ -1,11 +1,8 @@
 ﻿@model IEnumerable<ECommerce_MW.DAL.Entities.Country>
-
 @{
     ViewData["Title"] = "Index";
 }
-
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.3/css/jquery.dataTables.min.css" />
-
 <p>
     <a asp-action="Create" class="btn btn-outline-primary">Crear nuevo país</a>
 </p>
@@ -23,6 +20,9 @@
                                 @Html.DisplayNameFor(model => model.Name)
                             </th>
                             <th>
+                                @Html.DisplayNameFor(model => model.StateNumber)
+                            </th>
+                            <th>
                                 @Html.DisplayNameFor(model => model.CreatedDate)
                             </th>
                             <th>
@@ -37,6 +37,9 @@
                             <tr>
                                 <td>
                                     @Html.DisplayFor(modelItem => item.Name)
+                                </td>
+                                <td>
+                                    @Html.DisplayFor(modelItem => item.StateNumber)
                                 </td>
                                 <td>
                                     @Html.DisplayFor(modelItem => item.CreatedDate)
