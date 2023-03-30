@@ -1,24 +1,31 @@
-﻿using ECommerce_MW.DAL;
+﻿
+using ECommerce_MW.DAL;
 using ECommerce_MW.DAL.Entities;
 using ECommerce_MW.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System;
 
 namespace ECommerce_MW.Controllers
 {
     public class CountriesController : Controller
     {
         private readonly DataBaseContext _context;
-
         public CountriesController(DataBaseContext context)
         {
             _context = context;
         }
 
-        // GET: Countries  
+        private async Task<Country> GetCountryId(Guid? id)
+        {
+            Country country = await _context.Countries.FirstOrDefaultAsync(c => c.Id ==id);
+            return country;
+        }
+        // GET: Countries
         public async Task<IActionResult> Index()
         {
-            var x =await _context.Countries.Include(c => c.States).ToListAsync();
+            
+            var x = await _context.Countries.Include(c => c.States).ToListAsync();
             return View(x);
         }
 
@@ -29,31 +36,30 @@ namespace ECommerce_MW.Controllers
             {
                 return NotFound();
             }
-
             var country = await _context.Countries
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (country == null)
             {
                 return NotFound();
             }
-
             return View(country);
         }
-
         public IActionResult Create()
         {
             return View();
         }
-
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Country country)
         {
             if (ModelState.IsValid)
             {
-                _context.Add(country);
+                
                 try
+
                 {
+                    country.CreatedDate = DateTime.Now;
+                    _context.Add(country);
                     await _context.SaveChangesAsync();
                     return RedirectToAction(nameof(Index));
                 }
@@ -75,7 +81,6 @@ namespace ECommerce_MW.Controllers
             }
             return View(country);
         }
-
         // GET: Countries/Edit/5
         public async Task<IActionResult> Edit(Guid? id)
         {
@@ -83,15 +88,13 @@ namespace ECommerce_MW.Controllers
             {
                 return NotFound();
             }
-
-            var country = await _context.Countries.FindAsync(id);
+            var country = await GetCountryId(id);
             if (country == null)
             {
                 return NotFound();
             }
             return View(country);
         }
-
         // POST: Countries/Edit/5
         // To protect from overposting attacks, enable the specific properties you want to bind to.
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
@@ -103,11 +106,11 @@ namespace ECommerce_MW.Controllers
             {
                 return NotFound();
             }
-
             if (ModelState.IsValid)
             {
                 try
                 {
+                    country.ModifiedDate = DateTime.Now;
                     _context.Update(country);
                     await _context.SaveChangesAsync();
                     return RedirectToAction(nameof(Index));
@@ -130,7 +133,6 @@ namespace ECommerce_MW.Controllers
             }
             return View(country);
         }
-
         // GET: Countries/Delete/5
         public async Task<IActionResult> Delete(Guid? id)
         {
@@ -138,16 +140,13 @@ namespace ECommerce_MW.Controllers
             {
                 return NotFound();
             }
-
-            var country = await _context.Countries.FirstOrDefaultAsync(m => m.Id == id);
+            Country country = await _context.Countries.FirstOrDefaultAsync(m => m.Id == id);
             if (country == null)
             {
                 return NotFound();
             }
-
             return View(country);
         }
-
         // POST: Countries/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
@@ -162,33 +161,27 @@ namespace ECommerce_MW.Controllers
             {
                 _context.Countries.Remove(country);
             }
-
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
-
         [HttpGet]
-        public async Task<IActionResult> AddState(Guid? id)
+        public async Task<IActionResult> AddState(Guid? countryId)
         {
-            if (id== null)
+            if (countryId == null)
             {
                 return NotFound();
             }
-
-            Country country = await _context.Countries.FindAsync(id);
+            Country country = await GetCountryId(countryId);
             if (country == null)
             {
                 return NotFound();
             }
-
             StateViewModel stateViewModel = new()
             {
                 CountryId = country.Id,
             };
-
             return View(stateViewModel);
         }
-
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AddState(StateViewModel stateViewModel)
@@ -200,12 +193,11 @@ namespace ECommerce_MW.Controllers
                     State state = new State()
                     {
                         Cities = new List<City>(),
-                        Country = await _context.Countries.FindAsync(stateViewModel.CountryId),
+                        Country = await GetCountryId(stateViewModel.CountryId),
                         Name = stateViewModel.Name,
-                        CreatedDate = stateViewModel.CreatedDate,
-                        ModifiedDate = DateTime.Now,
+                        CreatedDate = DateTime.Now,
+                        ModifiedDate = null,
                     };
-
                     _context.Add(state);
                     await _context.SaveChangesAsync();
                     return RedirectToAction(nameof(Details), new { Id = stateViewModel.CountryId });
