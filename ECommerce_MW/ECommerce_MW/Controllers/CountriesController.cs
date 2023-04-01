@@ -1,30 +1,31 @@
-﻿
-using ECommerce_MW.DAL;
+﻿using ECommerce_MW.DAL;
 using ECommerce_MW.DAL.Entities;
 using ECommerce_MW.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System;
 
 namespace ECommerce_MW.Controllers
 {
     public class CountriesController : Controller
     {
         private readonly DataBaseContext _context;
-        public CountriesController(DataBaseContext context)
+
+        public CountriesController( DataBaseContext context)
         {
             _context = context;
         }
 
-        private async Task<Country> GetCountryId(Guid? id)
+        private async Task<Country> GetCountryById(Guid? id)
         {
-            Country country = await _context.Countries.FirstOrDefaultAsync(c => c.Id ==id);
+            Country country = await _context.Countries.FirstOrDefaultAsync(c => c.Id == id);
             return country;
         }
+
         // GET: Countries
         public async Task<IActionResult> Index()
         {
-            
+            //var x = await _context.Countries.ToListAsync();
+
             var x = await _context.Countries.Include(c => c.States).ToListAsync();
             return View(x);
         }
@@ -36,27 +37,30 @@ namespace ECommerce_MW.Controllers
             {
                 return NotFound();
             }
+
             var country = await _context.Countries
+                .Include(c => c.States)
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (country == null)
             {
                 return NotFound();
             }
+
             return View(country);
         }
+
         public IActionResult Create()
         {
             return View();
         }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Country country)
         {
             if (ModelState.IsValid)
             {
-                
                 try
-
                 {
                     country.CreatedDate = DateTime.Now;
                     _context.Add(country);
@@ -81,6 +85,7 @@ namespace ECommerce_MW.Controllers
             }
             return View(country);
         }
+
         // GET: Countries/Edit/5
         public async Task<IActionResult> Edit(Guid? id)
         {
@@ -88,13 +93,15 @@ namespace ECommerce_MW.Controllers
             {
                 return NotFound();
             }
-            var country = await GetCountryId(id);
+
+            var country = await GetCountryById(id);
             if (country == null)
             {
                 return NotFound();
             }
             return View(country);
         }
+
         // POST: Countries/Edit/5
         // To protect from overposting attacks, enable the specific properties you want to bind to.
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
@@ -106,6 +113,7 @@ namespace ECommerce_MW.Controllers
             {
                 return NotFound();
             }
+
             if (ModelState.IsValid)
             {
                 try
@@ -133,6 +141,7 @@ namespace ECommerce_MW.Controllers
             }
             return View(country);
         }
+
         // GET: Countries/Delete/5
         public async Task<IActionResult> Delete(Guid? id)
         {
@@ -140,13 +149,18 @@ namespace ECommerce_MW.Controllers
             {
                 return NotFound();
             }
-            Country country = await _context.Countries.FirstOrDefaultAsync(m => m.Id == id);
+
+            Country country = await _context.Countries
+                .Include(c => c.States)
+                .FirstOrDefaultAsync(c => c.Id == id);
             if (country == null)
             {
                 return NotFound();
             }
+
             return View(country);
         }
+
         // POST: Countries/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
@@ -154,16 +168,21 @@ namespace ECommerce_MW.Controllers
         {
             if (_context.Countries == null)
             {
-                return Problem("Entity set 'DatabaseContext.Countries'  is null.");
+                return Problem("Entity set 'DatabaseContext.Countries' is null.");
             }
-            var country = await _context.Countries.FindAsync(id);
+            var country = await _context.Countries
+                .Include(c => c.States)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
             if (country != null)
             {
                 _context.Countries.Remove(country);
             }
+
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
+
         [HttpGet]
         public async Task<IActionResult> AddState(Guid? countryId)
         {
@@ -171,17 +190,21 @@ namespace ECommerce_MW.Controllers
             {
                 return NotFound();
             }
-            Country country = await GetCountryId(countryId);
+
+            Country country = await GetCountryById(countryId);
             if (country == null)
             {
                 return NotFound();
             }
+
             StateViewModel stateViewModel = new()
             {
                 CountryId = country.Id,
             };
+
             return View(stateViewModel);
         }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AddState(StateViewModel stateViewModel)
@@ -193,11 +216,12 @@ namespace ECommerce_MW.Controllers
                     State state = new State()
                     {
                         Cities = new List<City>(),
-                        Country = await GetCountryId(stateViewModel.CountryId),
+                        Country = await GetCountryById(stateViewModel.CountryId),
                         Name = stateViewModel.Name,
                         CreatedDate = DateTime.Now,
                         ModifiedDate = null,
                     };
+
                     _context.Add(state);
                     await _context.SaveChangesAsync();
                     return RedirectToAction(nameof(Details), new { Id = stateViewModel.CountryId });
@@ -207,6 +231,78 @@ namespace ECommerce_MW.Controllers
                     if (dbUpdateException.InnerException.Message.Contains("duplicate"))
                     {
                         ModelState.AddModelError(string.Empty, "Ya existe un Dpto/Estado con el mismo nombre en este país.");
+                    }
+                    else
+                    {
+                        ModelState.AddModelError(string.Empty, dbUpdateException.InnerException.Message);
+                    }
+                }
+                catch (Exception exception)
+                {
+                    ModelState.AddModelError(string.Empty, exception.Message);
+                }
+            }
+            return View(stateViewModel);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> EditState(Guid? stateId)
+        {
+            if (stateId == null || _context.States == null)
+            {
+                return NotFound();
+            }
+
+            State state = await _context.States
+                .Include(s => s.Country)
+                .FirstOrDefaultAsync(s => s.Id == stateId);
+
+            if (state == null)
+            {
+                return NotFound();
+            }
+
+            StateViewModel stateViewModel = new()
+            {
+                CountryId = state.Country.Id,
+                Id = state.Id,
+                Name = state.Name,
+                CreatedDate = state.CreatedDate,
+            };
+
+            return View(stateViewModel);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditState(Guid countryId, StateViewModel stateViewModel)
+        {
+            if (countryId != stateViewModel.CountryId)
+            {
+                return NotFound();
+            }
+
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    State state = new()
+                    {
+                        Id = stateViewModel.Id,
+                        Name = stateViewModel.Name,
+                        CreatedDate = stateViewModel.CreatedDate,
+                        ModifiedDate = DateTime.UtcNow,
+                    };
+
+                    _context.Update(state);
+                    await _context.SaveChangesAsync();
+                    return RedirectToAction(nameof(Details), new { Id = stateViewModel.CountryId });
+                }
+                catch (DbUpdateException dbUpdateException)
+                {
+                    if (dbUpdateException.InnerException.Message.Contains("duplicate"))
+                    {
+                        ModelState.AddModelError(string.Empty, "Ya existe un estado con el mismo nombre.");
                     }
                     else
                     {
